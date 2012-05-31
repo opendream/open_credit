@@ -1,0 +1,123 @@
+<?php
+/**
+ * Implementation of hook_block
+ */
+function open_credit_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op == 'list') {
+    $blocks[0]['info'] = 'Open credit';
+    return $blocks;
+  }
+  else if ($op ==  'view') {
+		drupal_add_js(drupal_get_path('module', 'open_credit').'/open_credit.js');
+		drupal_add_js(drupal_get_path('module', 'open_credit').'/jquery.qtip-1.0.0-rc3.min.js');
+
+    $picture_path = variable_get('open_credit_picture', NULL);
+    $text_link = variable_get('open_credit_text', 'Go to Opendream website.');
+    $link_url = variable_get('open_credit_url', 'http://www.opendream.co.th/');
+
+		$path_module = drupal_get_path('module', 'open_credit');
+		if (!$picture_path) {
+			$picture_path = $path_module.'/images/default_picture.jpg';
+		}
+    $blocks['content'] = theme('open_credit_detail', $picture_path, $text_link, $link_url);
+    return $blocks;
+  }
+}
+
+/**
+ * Implementation for hook_menu()
+ */
+function open_credit_menu() {
+  $items = array();
+  
+  $items['open_credit/form'] = array(
+    'title' => t('Opendream support'),
+    'description' => t('Opendream support detail'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('open_credit_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implementation for hook_form()
+ */
+function open_credit_form($form_state) {
+  $path_module = drupal_get_path('module', 'open_credit');
+  $var_picture = variable_get('open_credit_picture', '');
+  $var_text = variable_get('open_credit_text', 'Go to Opendream website.');
+  $var_url = variable_get('open_credit_url', 'http://www.opendream.co.th/');
+
+  // Show default image form module.
+  if (!$var_picture) {
+    $form['img_preview'] = array(
+      '#value' => '<img src="'.base_path().$path_module.'/images/default_picture.jpg" width="50" height="50" />',
+    );
+  }
+  else {
+    $form['img_preview'] = array(
+      '#value' => '<img src="'.base_path().$var_picture.'" width="50" height="50" />',
+    );
+  }
+
+  $form['#attributes']['enctype'] = 'multipart/form-data';
+  $form['picture'] = array(
+    '#type' => 'file',
+    '#title' => t('รูปภาพ Footer Support'),
+  );
+    $form['name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('ข้อความบนลิงก์'),
+      '#default_value' => $var_text,
+      '#required' => TRUE,
+    );
+
+    $form['url'] = array(
+      '#type' => 'textfield',
+      '#title' => t('url ลิงก์'),
+      '#default_value' => $var_url,
+      '#required' => TRUE,
+    );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  $form['#validate'][] = 'open_credit_validate';
+
+  return $form;
+}
+
+/**
+ * Implementation of hook_validate()
+ */
+function open_credit_validate(&$form, $form_state) {
+  //Check browse image file use file size.
+  if (!$_FILES['files']['size']['picture']  == 0) {
+    $file = file_save_upload('picture', array(), file_directory_path());
+    file_set_status($file, FILE_STATUS_PERMANENT);
+    variable_set('open_credit_picture', $file->filepath);
+  } 
+}
+
+function open_credit_form_submit(&$form, $form_state) {
+  variable_set('open_credit_text', $form['name']['#value']);
+  variable_set('open_credit_url', $form['url']['#value']);
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function open_credit_theme() {
+  return array(
+    'open_credit_detail' => array(
+      'arguments' => array(
+        'picture_path' => NULL,
+        'text_link' => NULL,
+        'link_url' => NULL,),
+      'template' => 'open-credit-detail',
+    ),
+  );
+}
